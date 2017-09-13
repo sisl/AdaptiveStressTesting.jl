@@ -32,83 +32,41 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
-using RLESUtils, CPUTimeUtils
-using MDP
+type MCBestResults
+    #vector of top k paths
+    rewards::Vector{Float64}
+    action_seqs::Vector{Vector{ASTAction}}
 
-type SampleResults
-    reward::Float64
-    action_seq::Vector{ASTAction}
-end
-
-type ActionSequence{A <: Action}
-    sequence::Vector{A}
-    index::Int64
-end
-ActionSequence{A <: Action}(action_seq::Vector{A}) = ActionSequence(action_seq, 1)
-
-function action_seq_policy(action_seq::ActionSequence)
-    action = action_seq.sequence[action_seq.index]
-    action_seq.index += 1
-    return action
-end
-
-# Compatible with MDP / MCTSdpw
-action_seq_policy(action_seq::ActionSequence, s::State) = action_seq_policy(action_seq)
-
-#compatible with policy() in MDP
-uniform_policy(ast::AdaptiveStressTest, s::ASTState) = uniform_policy(ast.rsg, s)
-uniform_policy(rsg::RSG, s::ASTState) = random_action(rsg)
-
-function sample(ast::AdaptiveStressTest; verbose::Bool=true)
-    reward, actions = simulate(ast.transition_model, ast.rsg, uniform_policy, verbose=verbose)
-    actions = convert(Vector{ASTAction}, actions) #from Vector{Action}
-    SampleResults(reward, actions)
-end
-
-function sample(ast::AdaptiveStressTest, nsamples::Int64; print_rate::Int64=1)
-    #Samples are varied since ast.rsg is not reset and sampling is done in series
-    #Parallel version will need deterministic splitting of ast.rsg
-    results = Array(SampleResults, nsamples)
-    for i = 1:nsamples
-        if mod(i, print_rate) == 1
-            println("sample ", i, " of ", nsamples)
-        end
-        results[i] = sample(ast, verbose=false) 
+    function MCBestResults()
+        obj = new()
+        obj.rewards = Float64[] 
+        obj.action_seqs = Array(Vector{ASTAction},0)
+        obj
     end
-    results #vector of tuples(reward, actions)
 end
 
-function sample_best(ast::AdaptiveStressTest, nsamples::Int64; print_rate::Int64=10)
+function mc_best(ast::AdaptiveStressTest, nsamples::Int, top_k::Int=10; print_rate::Int64=10)
+    result = MCBestResults()
     for i = 1:nsamples
         if mod(i, print_rate) == 1
             println("sample ", i, " of ", nsamples)
         end
         reward, actions = simulate(ast.transition_model, ast.rsg, uniform_policy, verbose=false)
+        actions = convert(Vector{ASTAction}, actions) #from Vector{Action}
+        _update_best!(result, reward, actions, top_k)
     end
+    result
 end
 
-function sample_timed(ast::AdaptiveStressTest, maxtime_s::Float64; print_rate::Int64=1)
-    #Samples are varied since ast.rsg is not reset and sampling is done in series
-    tstart = CPUtime_start()
-    results = Array((Float64, Vector{Action}), 0)
-    while true #do while structure guarantees at least 1 sample
-        if mod(i, print_rate) == 1
-            println("sample ", i, " of ", nsamples)
-        end
-        tup = sample(ast, verbose=false)
-        push!(results, tup)
-        if CPUtime_elapsed_s(tstart) > maxtime_s
-            break
-        end
+function _update_best!(result::MCBestResults, reward::Float64, actions::Vector{ASTAction}, k::Int)
+    i = searchsortedfirst(result.rewards, reward; rev=true) #descending order
+    if 1 <= i <= k
+        insert!(result.rewards, i, reward)
+        insert!(result.action_seqs, i, actions)
     end
-    results #nsamples = length(results)
+    length(result.rewards) > k && pop!(result.rewards)
+    length(result.action_seqs) > k && pop!(result.action_seqs)
+    result
 end
 
-function play_sequence{A <: Action}(ast::AdaptiveStressTest, actions::Vector{A}; verbose::Bool=true)
-    reward2, actions2 = simulate(ast.transition_model, ActionSequence(actions), 
-        action_seq_policy, policy_length=length(actions), verbose=verbose)
-    actions2 = convert(Vector{ASTAction}, actions2) #from Vector{Action}
-    @assert actions == actions2 #check replay
-    (reward2, actions2)
-end
 

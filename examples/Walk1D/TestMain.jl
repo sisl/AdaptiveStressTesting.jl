@@ -39,7 +39,7 @@ using AdaptiveStressTesting
 const MAXTIME = 25 #sim endtime
 const RNG_LENGTH = 2
 const SIGMA = 1.0 #standard deviation of Gaussian
-const SEED = 0 
+const SEED = 1 
 
 sim_params = Walk1DParams()
 sim_params.startx = 1.0
@@ -54,7 +54,7 @@ ast = AdaptiveStressTest(ast_params, sim, Walk1D.initialize, Walk1D.update, Walk
 sample(ast)
 
 mcts_params = DPWParams()
-mcts_params.d = 50
+mcts_params.d = MAXTIME
 mcts_params.ec = 100
 mcts_params.n = 100
 mcts_params.k = 0.5
@@ -63,7 +63,7 @@ mcts_params.kp = 1.0
 mcts_params.alphap = 0.0
 mcts_params.clear_nodes = true
 mcts_params.maxtime_s = realmax(Float64)
-mcts_params.rng_seed = UInt64(0)
+mcts_params.rng_seed = UInt64(SEED)
 mcts_params.top_k = 10
 result = stress_test(ast, mcts_params)
 reward, action_seq = result.rewards[1], result.action_seqs[1]
