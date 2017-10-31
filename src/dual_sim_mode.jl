@@ -37,17 +37,26 @@
 
 import Base.length
 
-immutable DualSim{T}
-    sim1::T
-    sim2::T
+type DualSim
+    sim1
+    sim2
     get_reward::Function    
+
+    function DualSim(sim1, sim2, get_reward::Function)
+        ds = new(sim1, sim2, get_reward)
+        finalizer(ds, x->begin
+            finalize(x.sim1)
+            finalize(x.sim2)
+        end)
+        ds
+    end
 end
-DualSim{T}(sim1::T, sim2::T) = DualSim(sim1, sim2, get_dualsim_reward_default)
+DualSim(sim1, sim2) = DualSim(sim1, sim2, get_dualsim_reward_default)
 length(dualsim::DualSim) = 2 
 
 get_dualsim_reward_default(r1::Float64, r2::Float64) =  r1 - r2
 
-function transition_model{T}(ast::AdaptiveStressTest, ::DualSim{T})
+function transition_model(ast::AdaptiveStressTest, ::DualSim)
     function get_initial_state(rng::AbstractRNG) #rng is unused
         ast.t_index = 1
         ds = ast.sim
