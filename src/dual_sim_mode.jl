@@ -110,7 +110,7 @@ function transition_model(ast::AdaptiveStressTest, ::DualSim)
     function isterminal(s::ASTState)
         @assert ast.sim_hash == s.hash
         ds = ast.sim
-        ast.isterminal(ds.sim1) || ast.isterminal(ds.sim2)
+        ast.isterminal(ds.sim1) && ast.isterminal(ds.sim2)
     end
 
     #unchanged from single
