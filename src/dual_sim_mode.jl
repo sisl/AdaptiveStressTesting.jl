@@ -54,7 +54,13 @@ end
 DualSim(sim1, sim2) = DualSim(sim1, sim2, get_dualsim_reward_default)
 length(dualsim::DualSim) = 2 
 
-get_dualsim_reward_default(r1::Float64, r2::Float64) =  r1 - r2
+function get_dualsim_reward_default(prob1::Float64, event1::Bool, isterm1::Bool, dist1::Float64, 
+                                    prob2::Float64, event2::Bool, isterm2::Bool, dist2::Float64,
+                                    ast, ds::DualSim)
+    r1 = ast.get_reward(prob1, event1, isterm1, dist1, ast, ds.sim1)
+    r2 = ast.get_reward(prob2, event2, isterm2, dist2, ast, ds.sim2)
+    return r1 - r2
+end
 
 function transition_model(ast::AdaptiveStressTest, ::DualSim)
     function get_initial_state(rng::AbstractRNG) #rng is unused
@@ -84,15 +90,17 @@ function transition_model(ast::AdaptiveStressTest, ::DualSim)
 
         #sim1
         set_global(a0.rsg)
-        prob, event, dist = ast.update(ds.sim1)
-        r1 = ast.get_reward(prob, event, ast.isterminal(ds.sim1), dist, ast, ds.sim1)
+        prob1, event1, dist1 = ast.update(ds.sim1)
+        isterm1 = ast.isterminal(ds.sim1) 
 
         #sim2
         set_global(a0.rsg)
-        prob, event, dist = ast.update(ds.sim2)
-        r2 = ast.get_reward(prob, event, ast.isterminal(ds.sim2), dist, ast, ds.sim2)
+        prob2, event2, dist2 = ast.update(ds.sim2)
+        isterm2 = ast.isterminal(ds.sim2) 
 
-        r = ds.get_reward(r1, r2)
+        r = ds.get_reward(prob1, event1, isterm1, dist1,
+                            prob2, event2, isterm2, dist2,
+                            ast, ds)
 
         s1 = ASTState(ast.t_index, s0, a0)
         ast.sim_hash = s1.hash
