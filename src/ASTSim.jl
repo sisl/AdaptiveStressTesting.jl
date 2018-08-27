@@ -78,6 +78,15 @@ function sample(ast::AdaptiveStressTest, nsamples::Int64; print_rate::Int64=1)
     results #vector of tuples(reward, actions)
 end
 
+function sample_best(ast::AdaptiveStressTest, nsamples::Int64; print_rate::Int64=10)
+    for i = 1:nsamples
+        if mod(i, print_rate) == 1
+            println("sample ", i, " of ", nsamples)
+        end
+        reward, actions = simulate(ast.transition_model, ast.rsg, uniform_policy, verbose=false)
+    end
+end
+
 function sample_timed(ast::AdaptiveStressTest, maxtime_s::Float64; print_rate::Int64=1)
     #Samples are varied since ast.rsg is not reset and sampling is done in series
     tstart = CPUtime_start()

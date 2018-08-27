@@ -32,38 +32,41 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
-include("Walk1D.jl")
-using Walk1D
-using AdaptiveStressTesting
+type MCBestResults
+    #vector of top k paths
+    rewards::Vector{Float64}
+    action_seqs::Vector{Vector{ASTAction}}
 
-const MAXTIME = 25 #sim endtime
-const RNG_LENGTH = 2
-const SIGMA = 1.0 #standard deviation of Gaussian
-const SEED = 1 
+    function MCBestResults()
+        obj = new()
+        obj.rewards = Float64[] 
+        obj.action_seqs = Array(Vector{ASTAction},0)
+        obj
+    end
+end
 
-sim_params = Walk1DParams()
-sim_params.startx = 1.0
-sim_params.threshx = 10.0
-sim_params.endtime = MAXTIME
-sim_params.logging = true
+function mc_best(ast::AdaptiveStressTest, nsamples::Int, top_k::Int=10; print_rate::Int64=10)
+    result = MCBestResults()
+    for i = 1:nsamples
+        if mod(i, print_rate) == 1
+            println("sample ", i, " of ", nsamples)
+        end
+        reward, actions = simulate(ast.transition_model, ast.rsg, uniform_policy, verbose=false)
+        actions = convert(Vector{ASTAction}, actions) #from Vector{Action}
+        _update_best!(result, reward, actions, top_k)
+    end
+    result
+end
 
-sim = Walk1DSim(sim_params, SIGMA)
-ast_params = ASTParams(MAXTIME, RNG_LENGTH, SEED, nothing)
-ast = AdaptiveStressTest(ast_params, sim, Walk1D.initialize, Walk1D.update, Walk1D.isterminal)
+function _update_best!(result::MCBestResults, reward::Float64, actions::Vector{ASTAction}, k::Int)
+    i = searchsortedfirst(result.rewards, reward; rev=true) #descending order
+    if 1 <= i <= k
+        insert!(result.rewards, i, reward)
+        insert!(result.action_seqs, i, actions)
+    end
+    length(result.rewards) > k && pop!(result.rewards)
+    length(result.action_seqs) > k && pop!(result.action_seqs)
+    result
+end
 
-sample(ast)
 
-mcts_params = DPWParams()
-mcts_params.d = MAXTIME
-mcts_params.ec = 100
-mcts_params.n = 100
-mcts_params.k = 0.5
-mcts_params.alpha = 0.85
-mcts_params.kp = 1.0
-mcts_params.alphap = 0.0
-mcts_params.clear_nodes = true
-mcts_params.maxtime_s = realmax(Float64)
-mcts_params.rng_seed = UInt64(SEED)
-mcts_params.top_k = 10
-result = stress_test(ast, mcts_params)
-reward, action_seq = result.rewards[1], result.action_seqs[1]

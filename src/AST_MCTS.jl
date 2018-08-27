@@ -84,6 +84,9 @@ end
 
 #experimental: try not stepping
 function stress_test2(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::Bool=true)
+    #save and overwrite
+    clear_node_old = mcts_params.clear_nodes
+    n_old = mcts_params.n
     mcts_params.clear_nodes = false
     mcts_params.n *= ast.params.max_steps 
 
@@ -106,6 +109,10 @@ function stress_test2(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::
         k += 1
     end
     results.dpw = dpw
+
+    #restore
+    mcts_params.clear_nodes = clear_node_old
+    mcts_params.n = n_old 
 
     results
 end

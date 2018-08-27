@@ -224,6 +224,9 @@ export sample, sample_timed, play_sequence, uniform_policy
 include("AST_MCTS.jl") #mcts dpw
 export uniform_getAction, DPWParams, stress_test, stress_test2, StressTestResults
 
+include("AST_MC.jl") #mc best
+export mc_best
+
 include("dual_sim_mode.jl")
 export DualSim, get_dualsim_reward_default
 
