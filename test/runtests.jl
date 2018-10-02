@@ -51,3 +51,11 @@ for i = 1:N_SAMPLES
     result = stress_test(ast, mcts_params)
     @test length(result.action_seqs[1]) < MAXTIME
 end
+
+#AST should always end by pushing over threshold
+for i = 1:N_SAMPLES
+    result = stress_test2(ast, mcts_params)
+    @test length(result.action_seqs[1]) < MAXTIME
+end
+
+play_sequence(ast, result.action_seqs[1])
