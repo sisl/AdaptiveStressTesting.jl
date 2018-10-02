@@ -80,7 +80,6 @@ function stress_test(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::B
     results
 end
 
-#experimental: try not stepping
 function stress_test2(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::Bool=true)
     #save and overwrite
     clear_node_old = mcts_params.clear_nodes
@@ -98,7 +97,7 @@ function stress_test2(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::
 
     results = StressTestResults(mcts_params.top_k)
     k = 1
-    for (tr, r) in dpw.top_paths
+    for (tr, r) in BPQIterator(dpw.top_paths)
         results.rewards[k] = r
         results.action_seqs[k] = get_actions(tr) 
         #@show length(results.action_seqs[k])
