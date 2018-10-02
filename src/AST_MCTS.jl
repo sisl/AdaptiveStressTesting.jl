@@ -73,8 +73,8 @@ function stress_test(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::B
     end
 
     #sanity check
-    if mcts_reward >= results.rewards[1]
-        warn("mcts_reward=$(mcts_reward), top reward=$(results.rewards[end])")
+    if mcts_reward > results.rewards[1]
+        @warn "mcts_reward=$(mcts_reward), top reward=$(results.rewards[end])"
     end
 
     results
