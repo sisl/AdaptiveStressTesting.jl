@@ -32,90 +32,59 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
+module BoundedPriorityQueues
+
+export BoundedPriorityQueue, enqueue!, BPQIterator
+
+using DataStructures
+
+mutable struct BoundedPriorityQueue{K,V}
+    pq::PriorityQueue{K,V}
+    N::Int64
+
+    function BoundedPriorityQueue{K,V}(N::Int64, o::Base.Order.Ordering=Base.Order.Forward) where {K,V}
+        #higher is kept
+        new{K,V}(PriorityQueue{K,V}(o), N)
+    end
+end
+
+function DataStructures.enqueue!(q::BoundedPriorityQueue{K,V}, k::K, v::V;
+    make_copy::Bool=false) where {K,V}
+    haskey(q.pq, k) && return #keys must be unique
+    if make_copy
+        k = deepcopy(k)
+    end
+    enqueue!(q.pq, k, v)
+    while length(q.pq) > q.N
+        dequeue!(q.pq)
+    end
+end
+
+Base.length(q::BoundedPriorityQueue) = length(q.pq)
+Base.isempty(q::BoundedPriorityQueue) = isempty(q.pq) 
+Base.haskey(q::BoundedPriorityQueue) = haskey(q.pq)
+Base.keys(q::BoundedPriorityQueue) = keys(q.pq)
+Base.values(q::BoundedPriorityQueue) = values(q.pq)
+function Base.empty!(q::BoundedPriorityQueue)
+    while !isempty(q.pq)
+        dequeue!(q.pq)
+    end
+end
+
 """
-Dual simulation version of the Walk1D example.  Two simulations are doing
-the same random walks. Sim2 has a safety that will kick in on both upper
-and lower bounds, whereas Sim1 only has a safety on the lower bound.
-The dual simulation should be able to identify this difference.
+Ordered iterator
 """
-module Walk1DDual
+struct BPQIterator{K,V}
+    sorted_pairs::Vector{Pair{K,V}}
 
-using Distributions
-
-export SafeWalkParams, SafeWalkSim, initialize, update, isterminal, isevent
-
-mutable struct SafeWalkParams
-    startx::Float64
-    threshx::Float64 #+- thresh
-    endtime::Int64
-    logging::Bool
-    safe::Tuple{Bool,Bool} #lower/upperbound safeties
-end
-SafeWalkParams() = SafeWalkParams(1.0, 10.0, 20, false, (false,false)) #set some defaults
-
-mutable struct SafeWalkSim
-    id::Int64
-    p::SafeWalkParams #parameters
-    x::Float64
-    t::Int64 #num steps
-    distribution::Distribution
-    event::Bool
-    mindist::Float64
-    log::Vector{Any}
-end
-
-#Default to zero-mean Gaussian
-function SafeWalkSim(id::Int64, params::SafeWalkParams, sigma::Float64)
-    SafeWalkSim(id, params, Normal(0.0, sigma))
-end
-
-#Option to set own distribution
-function SafeWalkSim(id::Int64, params::SafeWalkParams, distribution::Distribution)
-    SafeWalkSim(id, params, params.startx, 0, distribution, false, floatmax(Float64), 
-        Float64[])
-end
-
-function initialize(sim::SafeWalkSim)
-    sim.t = 0
-    sim.x = sim.p.startx
-    sim.event = false
-    sim.mindist = floatmax(Float64)
-    empty!(sim.log)
-    if sim.p.logging
-        push!(sim.log, (sim.x, 0))
+    function BPQIterator(q::BoundedPriorityQueue{K,V}) where {K,V}
+        kvs = collect(q.pq)
+        sort!(kvs, by=x->x[2], rev=(q.pq.o==Base.Order.ForwardOrdering()))
+        new{K,V}(kvs)
     end
 end
-
-function update(sim::SafeWalkSim)
-    sim.t += 1
-    r = rand(sim.distribution)
-    sim.x += r
-    prob = pdf(sim.distribution, r)
-
-    #pull back to center gently if safety is on
-    if sim.p.safe[1] && sim.x <= sim.p.startx
-        sim.x -= r/2 
-    elseif sim.p.safe[2] && sim.x >= sim.p.startx
-        sim.x -= r/2 
-    end
-
-    dist = max(sim.p.threshx - abs(sim.x), 0.0) #non-negative
-    if sim.p.logging
-        push!(sim.log, (sim.x, dist))
-    end
-
-    sim.event |= isevent(sim)
-    sim.mindist = min(sim.mindist, dist)
-
-    return (prob, sim.event, sim.mindist)
-end
-
-function isevent(sim::SafeWalkSim)
-    abs(sim.x) >= sim.p.threshx #out-of-bounds in +-
-end
-
-function isterminal(sim::SafeWalkSim)
-    sim.t >= sim.p.endtime
-end
+Base.length(it::BPQIterator) = length(it.sorted_pairs)
+Base.iterate(it::BPQIterator) = iterate(it.sorted_pairs)
+Base.iterate(it::BPQIterator, state) = iterate(it.sorted_pairs, state)
 
 end #module

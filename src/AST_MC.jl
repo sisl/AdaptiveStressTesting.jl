@@ -32,7 +32,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
-type MCBestResults
+struct MCBestResults
     #vector of top k paths
     rewards::Vector{Float64}
     action_seqs::Vector{Vector{ASTAction}}
@@ -40,7 +40,7 @@ type MCBestResults
     function MCBestResults()
         obj = new()
         obj.rewards = Float64[] 
-        obj.action_seqs = Array(Vector{ASTAction},0)
+        obj.action_seqs = Vector{ASTAction}[]
         obj
     end
 end

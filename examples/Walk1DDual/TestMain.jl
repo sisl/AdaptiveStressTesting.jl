@@ -33,7 +33,7 @@
 # *****************************************************************************
 
 include("Walk1DDual.jl")
-using Walk1DDual
+using Main.Walk1DDual
 using AdaptiveStressTesting
 
 const MAXTIME = 20 #sim endtime
@@ -70,9 +70,9 @@ mcts_params.alpha = 0.85
 mcts_params.kp = 1.0
 mcts_params.alphap = 0.0
 mcts_params.clear_nodes = true
-mcts_params.maxtime_s = realmax(Float64)
+mcts_params.maxtime_s = floatmax(Float64)
 mcts_params.rng_seed = UInt64(0)
-mctS_params.top_k = 10
+mcts_params.top_k = 10
 
 result = stress_test(ast, mcts_params)
 reward, action_seq = result.rewards, result.action_seqs

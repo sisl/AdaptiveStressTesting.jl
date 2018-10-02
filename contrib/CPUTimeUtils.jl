@@ -32,8 +32,20 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
-pkgs = Pkg.installed()
-!haskey(pkgs, "RLESUtils") && Pkg.clone("https://github.com/sisl/RLESUtils.jl.git", "RLESUtils")
+module CPUTimeUtils
 
-#for now... need to checkout master to get julia v0.4 changes
-Pkg.checkout("CPUTime", "master")
+export CPUtime_start, CPUtime_elapsed_s
+
+using CPUTime
+
+CPUtime_start() = CPUtime_us()
+
+"""
+Usage:
+tstart = CPUtime_start() #start timing
+#...code to be timed
+elapsed_cpu_s = CPUtime_elapsed_s() #stop timing, returns elapsed time as float in seconds
+"""
+CPUtime_elapsed_s(tstart::UInt64) = float(CPUtime_us() - tstart) * 1e-6
+
+end #module

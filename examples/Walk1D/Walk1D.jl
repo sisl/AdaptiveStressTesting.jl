@@ -46,58 +46,58 @@ using Distributions
 export Walk1DParams, Walk1DSim, initialize, update, isterminal, isevent
 
 mutable struct Walk1DParams
-  startx::Float64
-  threshx::Float64 #+- thresh
-  endtime::Int64
-  logging::Bool
+    startx::Float64
+    threshx::Float64 #+- thresh
+    endtime::Int64
+    logging::Bool
 end
 Walk1DParams() = Walk1DParams(1.0, 10.0, 20, false)
 
 mutable struct Walk1DSim
-  p::Walk1DParams #parameters
-  x::Float64
-  t::Int64 #num steps
-  distribution::Distribution
-  log::Vector{Float64}
+    p::Walk1DParams #parameters
+    x::Float64
+    t::Int64 #num steps
+    distribution::Distribution
+    log::Vector{Float64}
 end
 
 #Default to zero-mean Gaussian
 function Walk1DSim(params::Walk1DParams, sigma::Float64)
-  Walk1DSim(params, Normal(0.0, sigma))
+    Walk1DSim(params, Normal(0.0, sigma))
 end
 
 #Option to set own distribution
 function Walk1DSim(params::Walk1DParams, distribution::Distribution)
-  Walk1DSim(params, params.startx, 0, distribution, Array{Float64}(0))
+    Walk1DSim(params, params.startx, 0, distribution, Float64[])
 end
 
 function initialize(sim::Walk1DSim)
-  sim.t = 0
-  sim.x = sim.p.startx
-  empty!(sim.log)
-  if sim.p.logging
-    push!(sim.log, sim.x)
-  end
+    sim.t = 0
+    sim.x = sim.p.startx
+    empty!(sim.log)
+    if sim.p.logging
+        push!(sim.log, sim.x)
+    end
 end
 
 function update(sim::Walk1DSim)
-  sim.t += 1
-  r = rand(sim.distribution)
-  sim.x += r
-  prob = pdf(sim.distribution, r)
-  dist = max(sim.p.threshx - abs(sim.x), 0.0) #non-negative
-  if sim.p.logging
-    push!(sim.log, sim.x)
-  end
-  return (prob, isevent(sim), dist)
+    sim.t += 1
+    r = rand(sim.distribution)
+    sim.x += r
+    prob = pdf(sim.distribution, r)
+    dist = max(sim.p.threshx - abs(sim.x), 0.0) #non-negative
+    if sim.p.logging
+        push!(sim.log, sim.x)
+    end
+    return (prob, isevent(sim), dist)
 end
 
 function isevent(sim::Walk1DSim)
-  abs(sim.x) >= sim.p.threshx #out-of-bounds in +-
+    abs(sim.x) >= sim.p.threshx #out-of-bounds in +-
 end
 
 function isterminal(sim::Walk1DSim)
-  isevent(sim) || sim.t >= sim.p.endtime
+    isevent(sim) || sim.t >= sim.p.endtime
 end
 
 end #module

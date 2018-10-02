@@ -32,8 +32,6 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
-using MCTSdpw
-
 mutable struct StressTestResults
     #vector of top k paths
     rewards::Vector{Float64}
@@ -44,8 +42,8 @@ mutable struct StressTestResults
     function StressTestResults(k::Int64)
         obj = new()
         obj.rewards = zeros(k) 
-        obj.action_seqs = Array{Vector{ASTAction}}(k)
-        obj.q_values = Array{Vector{Float64}}(k)
+        obj.action_seqs = Vector{Vector{ASTAction}}(undef,k)
+        obj.q_values = Vector{Vector{Float64}}(undef,k)
         obj
     end
 end
@@ -67,7 +65,7 @@ function stress_test(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::B
 
     results = StressTestResults(mcts_params.top_k)
     k = 1
-    for (tr, r) in dpw.top_paths
+    for (tr, r) in BPQIterator(dpw.top_paths)
         results.rewards[k] = r
         results.action_seqs[k] = get_actions(tr) 
         results.q_values[k] = get_q_values(tr)

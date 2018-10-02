@@ -34,25 +34,22 @@
 
 #methods to support dual simulation mode (two simulations side by side)
 #Author: Ritchie Lee
-
-import Base.length
-
-type DualSim
+mutable struct DualSim
     sim1
     sim2
     get_reward::Function    
 
     function DualSim(sim1, sim2, get_reward::Function)
         ds = new(sim1, sim2, get_reward)
-        finalizer(ds, x->begin
+        finalizer(x->begin
             finalize(x.sim1)
             finalize(x.sim2)
-        end)
+        end, ds)
         ds
     end
 end
 DualSim(sim1, sim2) = DualSim(sim1, sim2, get_dualsim_reward_default)
-length(dualsim::DualSim) = 2 
+Base.length(dualsim::DualSim) = 2 
 
 function get_dualsim_reward_default(prob1::Float64, event1::Bool, isterm1::Bool, dist1::Float64, 
                                     prob2::Float64, event2::Bool, isterm2::Bool, dist2::Float64,

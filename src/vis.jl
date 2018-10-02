@@ -1,5 +1,3 @@
-using AbstractTrees
-using D3Trees
 
 function d3tree(ast::AdaptiveStressTest, result::StressTestResults, get_text::Function;
                init_expand::Int=0)

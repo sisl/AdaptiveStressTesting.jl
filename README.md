@@ -30,7 +30,7 @@ When you're ready, run the stess test:
 ```julia
 result = stress_test(ast, mcts_params)
 ```
-where ``mcts_params`` is a ``DPWParams`` object containing the Monte Carlo tree search parameters.  This method applies a heuristic that tries to push the search deeper into the time sequence.  Specifically, the algorithm will commit to the best child found after ``iterations``.  Iterations thereafter will assume that the step is fixed and root the MCTS search starting at the next time step.  If you have episodes with many time steps, this may be a good heuristic to try.
+where ``mcts_params`` is a ``DPWParams`` object containing the Monte Carlo tree search parameters.  This method applies a heuristic that tries to push the search deeper into the time sequence.  Specifically, the algorithm will commit to the best child found after ``iterations``.  Iterations thereafter will assume that the step is fixed and root the MCTS search starting at the next time step, i.e., "online MCTS".  If you have episodes with many time steps, this may be a good heuristic to try.
 
 The traditional MCTS method can be called using
 ```julia
@@ -45,7 +45,7 @@ result.action_seqs[k]
 result.q_values[k]
 ```
 
-For full working examples, see the package's ``examples`` folder.
+For full working examples, see the Walk1D example in the ``examples`` folder. 
 
 ## References
 

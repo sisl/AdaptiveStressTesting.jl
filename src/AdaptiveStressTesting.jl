@@ -37,19 +37,26 @@
 # Actions are the random seeds
 #
 #Author: Ritchie Lee
-
-#for now... move this to submodule
-include("MDP.jl")
-include("MCTSdpw.jl")
-
 module AdaptiveStressTesting
 
 export AdaptiveStressTest, ASTParams, ASTState, ASTAction, transition_model, get_reward_default,
         random_action, get_action_sequence, reset_rsg!
 
-using MDP
-using RLESUtils, RNGWrapper
-import Base: hash, isequal, ==
+using Random, CPUTime
+using AbstractTrees, D3Trees
+
+include("../contrib/RNGWrapper.jl")
+include("../contrib/CPUTimeUtils.jl")
+include("../contrib/BoundedPriorityQueues.jl")
+using .RNGWrapper
+using .CPUTimeUtils
+using .BoundedPriorityQueues
+
+include("MDP.jl")
+include("MCTSdpw.jl")
+using .MDP
+using .MCTSdpw
+
 
 const DEFAULT_RSGLENGTH = 3
 const G_RNG = MersenneTwister(0) #not used
@@ -58,7 +65,7 @@ mutable struct ASTParams
     max_steps::Int64 # safety for runaways in sim
     rsg_length::Int64 # dictates number of unique available random seeds
     init_seed::Int64 # initial value of seed on construct
-    reset_seed::Union{Void,Int64} #reset to this seed value on initialize()
+    reset_seed::Union{Nothing,Int64} #reset to this seed value on initialize()
 end
 ASTParams() = ASTParams(0, DEFAULT_RSGLENGTH, 0, nothing)
 
@@ -75,7 +82,7 @@ mutable struct AdaptiveStressTest
     t_index::Int64 #starts at 1 and counts up in ints
     rsg::RSG #random seed generator
     initial_rsg::RSG #initial
-    reset_rsg::Union{Void,RSG} #reset to this RSG
+    reset_rsg::Union{Nothing,RSG} #reset to this RSG
 
     transition_model::TransitionModel
 
@@ -106,11 +113,11 @@ ASTAction(len::Int64=DEFAULT_RSGLENGTH, seed::Int64=0) = ASTAction(RSG(len, seed
 mutable struct ASTState <: State
     t_index::Int64 #sanity check that at least the time corresponds
     hash::UInt64 #hash sim state to match with ASTState
-    parent::Union{Void,ASTState} #parent state, root=nothing
+    parent::Union{Nothing,ASTState} #parent state, root=nothing
     action::ASTAction #action taken from parent, root=0
 end
 
-function ASTState(t_index::Int64, parent::Union{Void,ASTState}, action::ASTAction)
+function ASTState(t_index::Int64, parent::Union{Nothing,ASTState}, action::ASTAction)
     s = ASTState(t_index, 0, parent, action)
     s.hash = hash(s) #overwrites 0
     s
@@ -119,7 +126,7 @@ end
 transition_model(ast::AdaptiveStressTest) = transition_model(ast, ast.sim)
 
 function transition_model(ast::AdaptiveStressTest, ::Any)
-    function get_initial_state(rng::AbstractRNG) #rng is unused
+    function get_initial_state(rng::AbstractRNG=Random.GLOBAL_RNG) #rng is unused
         ast.t_index = 1
         ast.initialize(ast.sim)
         if ast.reset_rsg != nothing #reset if specified
@@ -130,7 +137,7 @@ function transition_model(ast::AdaptiveStressTest, ::Any)
         s
     end
 
-    function get_next_state(s0::ASTState, a0::ASTAction, rng::AbstractRNG) #rng is unused
+    function get_next_state(s0::ASTState, a0::ASTAction, rng::AbstractRNG=Random.GLOBAL_RNG) #rng is unused
         @assert ast.sim_hash == s0.hash
         ast.t_index += 1
         set_global(a0.rsg)
@@ -198,25 +205,25 @@ function get_action_sequence(s::ASTState)
     reverse!(actions)
 end
 
-hash(a::ASTAction) = hash(a.rsg)
-function hash(A::Vector{ASTAction}) 
+Base.hash(a::ASTAction) = hash(a.rsg)
+function Base.hash(A::Vector{ASTAction}) 
     h = hash(A[1])
     for i = 2:length(A)
         h = hash(h, hash(A[i]))
     end
     h
 end
-function hash(s::ASTState)
+function Base.hash(s::ASTState)
     h = hash(s.t_index)
     h = hash(h, hash(s.parent == nothing ? nothing : s.parent.hash))
     h = hash(h, hash(s.action))
     h
 end
 
-==(w::ASTAction,v::ASTAction) = w.rsg == v.rsg
-==(w::ASTState,v::ASTState) = hash(w) == hash(v)
-isequal(w::ASTAction,v::ASTAction) = isequal(w.rsg,v.rsg)
-isequal(w::ASTState,v::ASTState) = hash(w) == hash(v)
+Base.:(==)(w::ASTAction,v::ASTAction) = w.rsg == v.rsg
+Base.:(==)(w::ASTState,v::ASTState) = hash(w) == hash(v)
+Base.isequal(w::ASTAction,v::ASTAction) = isequal(w.rsg,v.rsg)
+Base.isequal(w::ASTState,v::ASTState) = hash(w) == hash(v)
 
 include("ASTSim.jl")
 export sample, sample_timed, play_sequence, uniform_policy

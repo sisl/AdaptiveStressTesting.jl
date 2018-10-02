@@ -37,27 +37,27 @@ module ASTTest
 export TestSimParams, TestSim, initialize, update, isterminal
 
 mutable struct TestSimParams
-  endtime::Int64
+    endtime::Int64
 end
 TestSimParams() = TestSimParams(10)
 
 mutable struct TestSim
-  p::TestSimParams #parameters
-  t::Int64
+    p::TestSimParams #parameters
+    t::Int64
 end
 TestSim(params::TestSimParams) = TestSim(params, 0)
 
 function initialize(sim::TestSim)
-  @show sim.t = 0
+    @show sim.t = 0
 end
 
 function update(sim::TestSim)
-  @show sim.t += 1
-  return (0.0, isevent(sim), Inf)
+    @show sim.t += 1
+    return (0.0, isevent(sim), Inf)
 end
 
 function isterminal(sim::TestSim)
-  sim.t >= sim.p.endtime
+    sim.t >= sim.p.endtime
 end
 
 isevent(sim::TestSim) = false

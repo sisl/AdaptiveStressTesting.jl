@@ -32,9 +32,6 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
-using RLESUtils, CPUTimeUtils
-using MDP
-
 mutable struct SampleResults
     reward::Float64
     action_seq::Vector{ASTAction}
@@ -44,7 +41,7 @@ mutable struct ActionSequence{A <: Action}
     sequence::Vector{A}
     index::Int64
 end
-ActionSequence{A <: Action}(action_seq::Vector{A}) = ActionSequence(action_seq, 1)
+ActionSequence(action_seq::Vector{A}) where {A<:Action} = ActionSequence{A}(action_seq, 1)
 
 function action_seq_policy(action_seq::ActionSequence)
     action = action_seq.sequence[action_seq.index]
@@ -68,7 +65,7 @@ end
 function sample(ast::AdaptiveStressTest, nsamples::Int64; print_rate::Int64=1)
     #Samples are varied since ast.rsg is not reset and sampling is done in series
     #Parallel version will need deterministic splitting of ast.rsg
-    results = Array(SampleResults, nsamples)
+    results = Vector{SampleResults}(undef,nsamples)
     for i = 1:nsamples
         if mod(i, print_rate) == 1
             println("sample ", i, " of ", nsamples)
@@ -90,7 +87,7 @@ end
 function sample_timed(ast::AdaptiveStressTest, maxtime_s::Float64; print_rate::Int64=1)
     #Samples are varied since ast.rsg is not reset and sampling is done in series
     tstart = CPUtime_start()
-    results = Array((Float64, Vector{Action}), 0)
+    results = Tuple{Float64,Vector{Action}}[]
     while true #do while structure guarantees at least 1 sample
         if mod(i, print_rate) == 1
             println("sample ", i, " of ", nsamples)
@@ -104,7 +101,7 @@ function sample_timed(ast::AdaptiveStressTest, maxtime_s::Float64; print_rate::I
     results #nsamples = length(results)
 end
 
-function play_sequence{A <: Action}(ast::AdaptiveStressTest, actions::Vector{A}; verbose::Bool=true)
+function play_sequence(ast::AdaptiveStressTest, actions::Vector{A}; verbose::Bool=true) where {A<:Action}
     reward2, actions2 = simulate(ast.transition_model, ActionSequence(actions), 
         action_seq_policy, policy_length=length(actions), verbose=verbose)
     actions2 = convert(Vector{ASTAction}, actions2) #from Vector{Action}

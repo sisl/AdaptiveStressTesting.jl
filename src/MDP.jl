@@ -2,6 +2,8 @@ module MDP
 
 export TransitionModel, Params, State, Action, Reward, Policy, solve, simulate
 
+using Random
+
 mutable struct TransitionModel
     getInitialState::Function
     getNextState::Function

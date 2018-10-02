@@ -33,7 +33,7 @@
 # *****************************************************************************
 
 include("ASTTest.jl")
-using ASTTest
+using Main.ASTTest
 using AdaptiveStressTesting
 
 const ENDTIME = 10 #sim endtime

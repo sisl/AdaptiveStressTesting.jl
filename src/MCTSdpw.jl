@@ -12,11 +12,11 @@ module MCTSdpw
 export DPWParams, DPWModel, DPW, selectAction, Depth
 export MCTSTracker, get_actions, get_q_values
 
-using MDP
-using CPUTime
-using RLESUtils, BoundedPriorityQueues
+using ..MDP
+import ..MDP: simulate
+using Random, CPUTime
 
-import MDP: simulate
+using ..BoundedPriorityQueues
 
 const Depth = Int64
 
@@ -81,7 +81,7 @@ mutable struct DPW{A<:Action}
     top_paths::BoundedPriorityQueue{MCTSTracker{A},Float64}
 end
 
-function DPW{A<:Action}(p::DPWParams, f::DPWModel, ::Type{A}) 
+function DPW(p::DPWParams, f::DPWModel, ::Type{A}) where {A<:Action}
     s = Dict{State,StateNode}()
     rng = MersenneTwister(p.rng_seed)
     tracker = MCTSTracker{A}()
@@ -210,7 +210,7 @@ function simulate(dpw::DPW,s::State,d::Depth;verbose::Bool=false)
             @assert cA.n > 0
             UCT[i] = cA.q + dpw.p.ec*sqrt(log(nS)/cA.n)
         end
-        a = A[indmax(UCT)] # choose action with highest UCT score
+        a = A[argmax(UCT)] # choose action with highest UCT score
     end
 
     push_action!(dpw.tracker, a) #track actions

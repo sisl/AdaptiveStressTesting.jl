@@ -32,90 +32,42 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *****************************************************************************
 
-"""
-Dual simulation version of the Walk1D example.  Two simulations are doing
-the same random walks. Sim2 has a safety that will kick in on both upper
-and lower bounds, whereas Sim1 only has a safety on the lower bound.
-The dual simulation should be able to identify this difference.
-"""
-module Walk1DDual
+module RNGWrapper
 
-using Distributions
+export RSG, set_global, next, next!, set_from_seed! 
 
-export SafeWalkParams, SafeWalkSim, initialize, update, isterminal, isevent
+using Random
+using Base.Iterators, IterTools
 
-mutable struct SafeWalkParams
-    startx::Float64
-    threshx::Float64 #+- thresh
-    endtime::Int64
-    logging::Bool
-    safe::Tuple{Bool,Bool} #lower/upperbound safeties
+struct RSG #Seed generator
+    state::Vector{UInt32}
 end
-SafeWalkParams() = SafeWalkParams(1.0, 10.0, 20, false, (false,false)) #set some defaults
-
-mutable struct SafeWalkSim
-    id::Int64
-    p::SafeWalkParams #parameters
-    x::Float64
-    t::Int64 #num steps
-    distribution::Distribution
-    event::Bool
-    mindist::Float64
-    log::Vector{Any}
+function RSG(len::Int64=1, seed::Int64=0)
+    return seed_to_state_itr(len, seed) |> collect |> RSG
 end
 
-#Default to zero-mean Gaussian
-function SafeWalkSim(id::Int64, params::SafeWalkParams, sigma::Float64)
-    SafeWalkSim(id, params, Normal(0.0, sigma))
+set_from_seed!(rsg::RSG, len::Int64, seed::Int64) = copy!(rsg.state, seed_to_state_itr(len, seed))
+seed_to_state_itr(len::Int64, seed::Int64) = take(iterated(hash_uint32, seed), len)
+
+function next!(rsg::RSG)
+    map!(hash_uint32, rsg.state, rsg.state)
+    return rsg
+end
+function next(rsg0::RSG)
+    rsg1 = deepcopy(rsg0)
+    next!(rsg1)
+    return rsg1
 end
 
-#Option to set own distribution
-function SafeWalkSim(id::Int64, params::SafeWalkParams, distribution::Distribution)
-    SafeWalkSim(id, params, params.startx, 0, distribution, false, floatmax(Float64), 
-        Float64[])
-end
+set_global(rsg::RSG) = set_gv_rng_state(rsg.state)
+set_gv_rng_state(i::UInt32) = set_gv_rng_state([i])
+set_gv_rng_state(a::Vector{UInt32}) = Random.seed!(a) #
+#set_gv_rng_state(a::Vector{UInt32}) = Base.dSFMT.dsfmt_gv_init_by_array(a) #doesn't seem to work anymore
+hash_uint32(x) = UInt32(hash(x) & 0x00000000FFFFFFFF) #take lower 32-bits
 
-function initialize(sim::SafeWalkSim)
-    sim.t = 0
-    sim.x = sim.p.startx
-    sim.event = false
-    sim.mindist = floatmax(Float64)
-    empty!(sim.log)
-    if sim.p.logging
-        push!(sim.log, (sim.x, 0))
-    end
-end
-
-function update(sim::SafeWalkSim)
-    sim.t += 1
-    r = rand(sim.distribution)
-    sim.x += r
-    prob = pdf(sim.distribution, r)
-
-    #pull back to center gently if safety is on
-    if sim.p.safe[1] && sim.x <= sim.p.startx
-        sim.x -= r/2 
-    elseif sim.p.safe[2] && sim.x >= sim.p.startx
-        sim.x -= r/2 
-    end
-
-    dist = max(sim.p.threshx - abs(sim.x), 0.0) #non-negative
-    if sim.p.logging
-        push!(sim.log, (sim.x, dist))
-    end
-
-    sim.event |= isevent(sim)
-    sim.mindist = min(sim.mindist, dist)
-
-    return (prob, sim.event, sim.mindist)
-end
-
-function isevent(sim::SafeWalkSim)
-    abs(sim.x) >= sim.p.threshx #out-of-bounds in +-
-end
-
-function isterminal(sim::SafeWalkSim)
-    sim.t >= sim.p.endtime
-end
+Base.length(rsg::RSG) = length(rsg.state)
+Base.hash(rsg::RSG) = hash(rsg.state)
+Base.:(==)(rsg1::RSG, rsg2::RSG) = rsg1.state == rsg2.state
+Base.isequal(rsg1::RSG, rsg2::RSG) = rsg1 == rsg2
 
 end #module
