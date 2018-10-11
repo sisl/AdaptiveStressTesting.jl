@@ -27,8 +27,6 @@ mutable struct DPWParams
     n::Int64                    # number of iterations
     k::Float64                  # first constant controlling action generation
     alpha::Float64              # second constant controlling action generation
-    kp::Float64                 # first constant controlling transition state generation
-    alphap::Float64             # second constant controlling transition state generation
     clear_nodes::Bool           # clear all nodes before selecting next action
     maxtime_s::Float64          # maximum time to iterate, seconds
     rng_seed::UInt64            # random number generator
@@ -37,9 +35,9 @@ mutable struct DPWParams
 
     DPWParams() = new()
     function DPWParams(d::Depth, ec::Float64, n::Int64, k::Float64, alpha::Float64, 
-        kp::Float64,alphap::Float64, clear_nodes::Bool, maxtime_s::Float64, 
+        clear_nodes::Bool, maxtime_s::Float64, 
         rng_seed::UInt64, top_k::Int64=10) 
-        new(d, ec, n, k, alpha, kp, alphap, clear_nodes, maxtime_s, rng_seed, top_k)
+        new(d, ec, n, k, alpha, clear_nodes, maxtime_s, rng_seed, top_k)
     end
 end
 
@@ -217,33 +215,16 @@ function simulate(dpw::DPW,s::State,d::Depth;verbose::Bool=false)
     qval = dpw.s[s].a[a].q
     push_q_value!(dpw.tracker, qval) #track q_values
 
-    if length(dpw.s[s].a[a].s) <= dpw.p.kp*dpw.s[s].a[a].n^dpw.p.alphap 
-        #criterion for new transition state consideration
-        sp,r = dpw.f.model.getNextState(s,a,dpw.rng) # choose a new state and get reward
-        if !haskey(dpw.s[s].a[a].s,sp) # if transition state not yet explored, add to 
-            #set and update reward
-            dpw.s[s].a[a].s[sp] = StateActionStateNode()
-            dpw.s[s].a[a].s[sp].r = r
-        else
-            dpw.s[s].a[a].s[sp].n += one(UInt64)
-        end
-    else # sample from transition states proportional to their occurence in the past
-        cA = dpw.s[s].a[a]
-        SP = collect(keys(cA.s))
-        rn = rand(dpw.rng)*cA.n
-        cnt = 0
-        i = 1
-        while true
-            cnt += cA.s[SP[i]].n
-            if rn <= cnt
-                sp = SP[i]
-                break
-            end
-            i += 1
-        end
-        r = dpw.s[s].a[a].s[sp].r
+    #state transition
+    sp,r = dpw.f.model.getNextState(s,a,dpw.rng) # deterministic transition
+    if !haskey(dpw.s[s].a[a].s,sp) # if transition state not yet exists, add it
+        dpw.s[s].a[a].s[sp] = StateActionStateNode()
+        dpw.s[s].a[a].s[sp].r = r
+    else
+        #already exists
         dpw.s[s].a[a].s[sp].n += one(UInt64)
     end
+
     q = r + simulate(dpw,sp,d-1)
     cA = dpw.s[s].a[a]
     cA.n += one(UInt64)
