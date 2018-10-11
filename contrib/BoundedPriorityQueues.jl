@@ -34,7 +34,7 @@
 
 module BoundedPriorityQueues
 
-export BoundedPriorityQueue, enqueue!, BPQIterator
+export BoundedPriorityQueue, enqueue! 
 
 using DataStructures
 
@@ -74,17 +74,25 @@ end
 """
 Ordered iterator
 """
-struct BPQIterator{K,V}
-    sorted_pairs::Vector{Pair{K,V}}
-
-    function BPQIterator(q::BoundedPriorityQueue{K,V}) where {K,V}
-        kvs = collect(q.pq)
-        sort!(kvs, by=x->x[2], rev=(q.pq.o==Base.Order.ForwardOrdering()))
-        new{K,V}(kvs)
+function Base.iterate(q::BoundedPriorityQueue) 
+    pairs = collect(q.pq)
+    sort!(pairs, by=x->x[2], rev=(q.pq.o==Base.Order.ForwardOrdering()))
+    result = iterate(pairs)
+    if result == nothing
+        return nothing
+    else
+        item, state = result
+        return item, (pairs=pairs, state=state)
     end
 end
-Base.length(it::BPQIterator) = length(it.sorted_pairs)
-Base.iterate(it::BPQIterator) = iterate(it.sorted_pairs)
-Base.iterate(it::BPQIterator, state) = iterate(it.sorted_pairs, state)
+function Base.iterate(q::BoundedPriorityQueue, x) 
+    result = iterate(x.pairs, x.state) 
+    if result == nothing
+        return nothing
+    else
+        item, state = result
+        return item, (pairs=x.pairs, state=state)
+    end
+end
 
 end #module

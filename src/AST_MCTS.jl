@@ -65,7 +65,7 @@ function stress_test(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::B
 
     results = StressTestResults(mcts_params.top_k)
     k = 1
-    for (tr, r) in BPQIterator(dpw.top_paths)
+    for (tr, r) in dpw.top_paths
         results.rewards[k] = r
         results.action_seqs[k] = get_actions(tr) 
         results.q_values[k] = get_q_values(tr)
@@ -97,7 +97,7 @@ function stress_test2(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::
 
     results = StressTestResults(mcts_params.top_k)
     k = 1
-    for (tr, r) in BPQIterator(dpw.top_paths)
+    for (tr, r) in dpw.top_paths
         results.rewards[k] = r
         results.action_seqs[k] = get_actions(tr) 
         #@show length(results.action_seqs[k])
