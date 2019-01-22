@@ -45,6 +45,12 @@ result.action_seqs[k]
 result.q_values[k]
 ```
 
+To replay the simulator through a sequence of seeds to recover the trajectory, use
+```julia
+#Optionally, activate user logging routines in the sim
+reward, actions = play_sequence(ast, result.actions_seqs[k]) #steps the simulator through a sequence of actions
+```
+
 For full working examples, see the Walk1D example in the ``examples`` folder. 
 
 ## References
