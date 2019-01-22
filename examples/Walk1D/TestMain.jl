@@ -65,3 +65,5 @@ mcts_params.rng_seed = UInt64(SEED)
 mcts_params.top_k = 10
 result = stress_test(ast, mcts_params)
 reward, action_seq = result.rewards[1], result.action_seqs[1]
+play_sequence(ast, action_seq)
+#sim.log
