@@ -47,7 +47,7 @@ result.q_values[k]
 
 To replay the simulator through a sequence of seeds to recover the trajectory, use
 ```julia
-#Optionally, activate user logging routines in the sim
+#Optionally, first activate user logging routines in the sim here.  Then,
 reward, actions = play_sequence(ast, result.actions_seqs[k]) #steps the simulator through a sequence of actions
 ```
 
