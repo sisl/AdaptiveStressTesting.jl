@@ -130,7 +130,7 @@ function trace_q_values(dpw::DPW, s_current::State)
     reverse(q_values)
 end
 
-function selectAction(dpw::DPW, s::State; verbose::Bool=false)
+function selectAction(dpw::DPW, s::State, d::Int=dpw.p.d; verbose::Bool=false)
     if dpw.p.clear_nodes
         #save s, its successors, and its ancestors
         new_dict = saveState(dpw, dpw.s, s)
@@ -140,7 +140,6 @@ function selectAction(dpw::DPW, s::State; verbose::Bool=false)
 
     # This function calls simulate and chooses the approximate best action 
     #from the reward approximations
-    d = dpw.p.d
     starttime_us = CPUtime_us()
     for i = 1:dpw.p.n
         R, actions = dpw.f.model.goToState(s)
@@ -212,6 +211,7 @@ function simulate(dpw::DPW,s::State,d::Depth;verbose::Bool=false)
     end
 
     push_action!(dpw.tracker, a) #track actions
+
     qval = dpw.s[s].a[a].q
     push_q_value!(dpw.tracker, qval) #track q_values
 

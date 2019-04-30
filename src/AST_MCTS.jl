@@ -60,8 +60,13 @@ function stress_test(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::B
     dpw_model = DPWModel(transition_model(ast), uniform_getAction(ast.rsg), 
         uniform_getAction(ast.rsg))
     dpw = DPW(mcts_params, dpw_model, ASTAction)
+    d = dpw.p.d + 1
+    function f_selectAction(x,y)
+        d -= 1
+        selectAction(x,y,d)
+    end
     (mcts_reward, action_seq) = simulate(dpw.f.model, dpw, 
-        (x,y)->selectAction(x,y), verbose=verbose)
+        f_selectAction, verbose=verbose)
 
     results = StressTestResults(mcts_params.top_k)
     k = 1
@@ -75,6 +80,8 @@ function stress_test(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::B
     #sanity check
     if mcts_reward > results.rewards[1]
         @warn "mcts_reward=$(mcts_reward), top reward=$(results.rewards[end])"
+
+        pushfirst!(results.rewards, mcts_reward)
     end
 
     results
