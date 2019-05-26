@@ -75,15 +75,6 @@ function sample(ast::AdaptiveStressTest, nsamples::Int64; print_rate::Int64=1)
     results #vector of tuples(reward, actions)
 end
 
-function sample_best(ast::AdaptiveStressTest, nsamples::Int64; print_rate::Int64=10)
-    for i = 1:nsamples
-        if mod(i, print_rate) == 1
-            println("sample ", i, " of ", nsamples)
-        end
-        reward, actions = simulate(ast.transition_model, ast.rsg, uniform_policy, verbose=false)
-    end
-end
-
 function sample_timed(ast::AdaptiveStressTest, maxtime_s::Float64; print_rate::Int64=1)
     #Samples are varied since ast.rsg is not reset and sampling is done in series
     tstart = CPUtime_start()
@@ -109,3 +100,32 @@ function play_sequence(ast::AdaptiveStressTest, actions::Vector{A}; verbose::Boo
     (reward2, actions2)
 end
 
+# this version returns the full rewards vector
+#
+function play_sequence_detailed(ast::AdaptiveStressTest, actions::Vector{A}; verbose::Bool=true) where {A<:Action}
+    rewards2, actions2 = simulate_detailed(ast.transition_model, ActionSequence(actions), 
+        action_seq_policy, policy_length=length(actions), verbose=verbose)
+    actions2 = convert(Vector{ASTAction}, actions2) #from Vector{Action}
+    @assert actions == actions2 #check replay
+    (rewards2, actions2)
+end
+
+function test_sim(ast::AdaptiveStressTest, N::Int=1; verbose::Bool=false)
+    #test N times
+    for i = 1:N
+        verbose && println("Testing $i of $N")
+        #simulate
+        rewards, actions = simulate_detailed(ast.transition_model, ast.rsg, uniform_policy, verbose=false)
+        actions = convert(Vector{ASTAction}, actions) #from Vector{Action}
+        verbose && println("simulation rewards: $rewards")
+        verbose && println("simulation actions: $actions")
+        #replay
+        rewards2, actions2 = play_sequence_detailed(ast, actions; verbose=false) 
+        verbose && println("replay rewards: $rewards2")
+        verbose && println("replay actions: $actions2")
+        if (rewards != rewards2) || (actions != actions2)
+            return false #test failed
+        end
+    end
+    return true #test passed
+end

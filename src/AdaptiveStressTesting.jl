@@ -226,7 +226,7 @@ Base.isequal(w::ASTAction,v::ASTAction) = isequal(w.rsg,v.rsg)
 Base.isequal(w::ASTState,v::ASTState) = hash(w) == hash(v)
 
 include("ASTSim.jl")
-export sample, sample_timed, play_sequence, uniform_policy
+export sample, sample_timed, play_sequence, play_sequence_detailed, uniform_policy, test_sim
 
 include("AST_MCTS.jl") #mcts dpw
 export uniform_getAction, DPWParams, stress_test, stress_test2, StressTestResults
