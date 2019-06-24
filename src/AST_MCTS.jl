@@ -57,6 +57,7 @@ end
 
 #Starts MCTS
 function stress_test(ast::AdaptiveStressTest, mcts_params::DPWParams; verbose::Bool=true)
+    mcts_params.n <= 1 && error("stress_test requires mcts_params.n > 1")
     dpw_model = DPWModel(transition_model(ast), uniform_getAction(ast.rsg), 
         uniform_getAction(ast.rsg))
     dpw = DPW(mcts_params, dpw_model, ASTAction)
