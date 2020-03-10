@@ -36,23 +36,32 @@ include("Walk1D.jl")
 using Main.Walk1D
 using AdaptiveStressTesting
 
+# define global params
 const MAXTIME = 25 #sim endtime
 const RNG_LENGTH = 2
 const SIGMA = 1.0 #standard deviation of Gaussian
 const SEED = 1 
 
+# define Walk1D simulation params
 sim_params = Walk1DParams()
 sim_params.startx = 1.0
 sim_params.threshx = 10.0
 sim_params.endtime = MAXTIME
 sim_params.logging = true
 
+# create the sim object
 sim = Walk1DSim(sim_params, SIGMA)
+
+# define adaptive stress testing params
 ast_params = ASTParams(MAXTIME, RNG_LENGTH, SEED, nothing)
+
+# create the adaptive stress testing object
 ast = AdaptiveStressTest(ast_params, sim, Walk1D.initialize, Walk1D.update, Walk1D.isterminal)
 
+# draw and random sample from the sim.  Output should step to MAXTIME.
 sample(ast)
 
+# define the MCTS params to be used in AST.
 mcts_params = DPWParams()
 mcts_params.d = MAXTIME
 mcts_params.ec = 100
@@ -62,8 +71,16 @@ mcts_params.alpha = 0.85
 mcts_params.clear_nodes = true
 mcts_params.maxtime_s = floatmax(Float64)
 mcts_params.rng_seed = UInt64(SEED)
-mcts_params.top_k = 10
+mcts_params.top_k = 10  #number of top paths to remember/report
+
+# perform the AST search
 result = stress_test(ast, mcts_params)
+
+# extract the best reward and sequence of seeds
 reward, action_seq = result.rewards[1], result.action_seqs[1]
+
+# replay the sequence
 play_sequence(ast, action_seq)
+
+# To look at the logged x positions, uncomment the following:
 #sim.log
